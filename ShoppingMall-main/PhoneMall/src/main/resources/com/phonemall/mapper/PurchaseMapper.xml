@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "=//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace = "com.phonemall.mapper.PurchaseMapper">
+	
+	<resultMap type = "com.phonemall.domain.CartListVO" id = "CartListMap">
+		<result property = "user_email" column="user_email"/>
+		<result property = "product_id" column="product_id"/>
+		<result property = "product_qty" column="product_qty"/>
+		<result property = "product_color" column="product_color"/>
+		<result property = "product_title" column = "product_title"/>
+		<result property = "product_price" column = "product_price"/>
+		<result property = "total_price" column = "product_price"/>
+		<result property = "product_brand" column = "product_brand"/>
+		<result property = "product_type" column = "product_type"/>
+		<result property = "product_carrier" column = "product_carrier"/>
+		<collection property="product_imageList" resultMap = "imageMap"></collection>
+	</resultMap>
+	
+	<resultMap type = "com.phonemall.domain.CartListVO" id = "CartListMap2">
+		<result property = "user_email" column="user_email"/>
+		<result property = "product_id" column="product_id"/>
+		<result property = "product_qty" column="product_qty"/>
+		<result property = "product_color" column="product_color"/>
+		<result property = "product_title" column = "product_title"/>
+		<result property = "product_price" column = "product_price"/>
+		<result property = "total_price" column = "product_price"/>
+		<result property = "product_brand" column = "product_brand"/>
+		<result property = "product_type" column = "product_type"/>
+		<result property = "product_carrier" column = "product_carrier"/>
+	</resultMap>
+
+	
+	 <resultMap type="com.phonemall.domain.PurchaseVO" id ="purchaseMap">
+	 	<id property = "sequence_id" column="sequence_id"/>
+	 	<result property = "purchase_id" column="purchase_id"/>
+	 	<result property = "purchaseDate" column = "purchaseDate"/>
+	 	<result property = "memo" column = "memo"/>
+	 	<result property = "email" column = "email"/>
+	 	<result property = "lastname" column = "lastname"/>
+	 	<result property = "firstname" column = "firstname"/>
+	 	<result property = "postalcode" column = "postalcode"/>
+	 	<result property = "phonenum" column = "phonenum"/>
+	 	<result property = "address" column = "address"/>
+	 	<result property = "paymentMethod" column = "paymentMethod"/>
+	 	<result property = "used_coupon" column = "used_coupon"/>
+	 	<result property = "total_money" column = "total_money"/>
+	 	<result property = "discount_result" column = "dicount_result"/>
+	 </resultMap>
+	 
+	 <resultMap type="com.phonemall.domain.PurchaseUserVO" id ="PurchaseUserMap">
+		<id property = "order_id" column="order_id"/>
+		<result property = "user_email" column="user_email"/>
+		<result property = "product_id" column = "product_id"/>
+		<result property = "product_qty" column = "product_qty"/>
+		<result property = "product_price" column = "product_price"/>
+		<result property = "product_color" column = "product_color"/>
+		<result property = "purchase_id" column = "purchase_id"/>
+		<result property = "purchase_date" column = "purchaseDate"/>
+		<result property = "product_title" column = "product_title"/>
+		<result property = "order_status" column = "order_status"/>
+		<association property="product_image" resultMap = "imageMap">
+		</association>
+	</resultMap>
+	
+	 <resultMap type = "com.phonemall.domain.ProductImageVO" id = "imageMap">
+		<result property = "image_uuid" column = "image_uuid"/>
+		<result property="image_uploadPath" column = "image_uploadPath"/>
+		<result property="image_name" column="image_name"/>
+		<result property = "product_id" column="product_id"/>
+	</resultMap>
+	
+	 <select id="read" resultMap = "purchaseMap">
+	 	select * from purchase where email=#{user_email}
+	 </select>
+	 
+	 <insert id="insert">
+	 	INSERT INTO purchase(purchase_id,purchaseDate,memo,email,lastname,firstname,postalcode,phonenum,address,paymentMethod,used_coupon,total_money,discount_result)
+		VALUES (#{purchase_id},#{purchaseDate},#{memo},#{email},#{lastname},#{firstname},#{postalcode},#{phonenum},#{address},#{paymentMethod},#{used_coupon},#{total_money},#{discount_result})
+	 </insert>
+	 
+	 <insert id="orderInfo_Details">
+		INSERT INTO order_complete(user_email, product_id, product_qty, product_price, product_color, purchase_id)
+     	SELECT user_email, product_id, product_qty, product_price, product_color , #{purchase_id}
+        FROM cart
+        WHERE user_email = #{email}
+	</insert>
+	
+	<select id="selectbyId" resultMap = "CartListMap2">
+		select p.product_id, o.product_color, o.product_qty, o.user_email, product_title, p.product_price,product_carrier,product_brand,product_type
+		from order_complete o, product p
+		where o.purchase_id = #{puchase_id} and o.product_id = p.product_id 
+	</select>
+	
+	<select id="selectbyPurchaseId" resultMap="purchaseMap">
+		select * from purchase where purchase_id = #{purchase_id}
+	</select>
+	
+	<select id = "getListWithPaging" resultMap="PurchaseUserMap">
+		SELECT c.*, pur.purchaseDate, p.product_title, image_uuid, image_uploadPath, image_name
+		FROM (SELECT * FROM order_complete WHERE user_email=#{email}) c
+		JOIN purchase pur
+		ON c.purchase_id = pur.purchase_id
+		<if test= "cri.keyword != null and cri.keyword != ''">
+			AND EXTRACT(YEAR_MONTH FROM pur.purchaseDate) = #{cri.keyword}
+		</if>
+		LEFT OUTER JOIN product p
+		ON c.product_id = p.product_id
+		LEFT OUTER JOIN product_image i
+		ON p.product_id = i.product_id AND i.image_type="mainImage"
+		ORDER BY purchaseDate DESC
+		LIMIT #{cri.pageStart}, #{cri.amount}
+	
+	</select>
+	
+	<delete id="deletePurchaseById">
+		DELETE FROM purchase WHERE purchase_id = #{purchase_id}
+	</delete>
+
+	<delete id="deleteOrderById">
+		DELETE FROM order_complete WHERE purchase_id = #{purchase_id}
+	</delete>
+	
+	<select id="getListNum" resultType = "int">
+	 	SELECT COUNT(*) 
+		FROM (SELECT * FROM order_complete WHERE user_email=#{email}) c
+		<if test= "keyword != null and keyword != ''">
+			JOIN purchase pur
+			ON c.purchase_id = pur.purchase_id AND EXTRACT(YEAR_MONTH FROM pur.purchaseDate) = ${keyword}
+		</if>
+	</select>
+	
+	<update id="updateStatus">
+		UPDATE order_complete SET order_status = 1 WHERE order_id=#{order_id}
+	</update>
+	
+</mapper>
+

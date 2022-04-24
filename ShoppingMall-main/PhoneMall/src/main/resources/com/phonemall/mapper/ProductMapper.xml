@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "=//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.phonemall.mapper.ProductMapper">
+
+<select id = "getList" resultType ="com.phonemall.domain.ProductVO">
+<!-- XML에서 부등호를 사용하기위해 CDATA사용 -->
+<![CDATA[
+	select * from product where product_id>0
+]]>
+</select>
+ 
+<insert id = "insert">
+	INSERT INTO product (product_title, product_price, product_description)
+	VALUES(#{product_title}, #{product_price}, #{product_description})
+
+</insert>
+  
+<insert id = "insertSelectKey" useGeneratedKeys="true" keyProperty="product_id" parameterType="com.phonemall.domain.ProductVO">
+	INSERT INTO product (product_title, product_price, product_description, product_information, product_brand, product_type, product_carrier)
+	VALUES(#{product_title}, #{product_price}, #{product_description}, #{product_information}, #{product_brand}, #{product_type}, #{product_carrier})
+</insert>
+
+<resultMap type="com.phonemall.domain.ProductVO" id ="productMap">
+	<id property = "product_id" column="product_id"/>
+	<result property = "product_title" column = "product_title"/>
+	<result property = "product_price" column = "product_price"/>
+	<result property = "product_regDate" column = "product_regDate"/>
+	<result property = "product_description" column = "product_description"/>
+	<result property = "product_information" column = "product_information"/>
+	<result property = "product_brand" column = "product_brand"/>
+	<result property = "product_type" column = "product_type"/>
+	<result property = "product_carrier" column = "product_carrier"/>
+	<result property = "review_count" column="review_count"/>
+	<result property = "product_rating" column="product_rating"/>
+	<collection property="product_imageList" resultMap = "imageMap">
+	</collection>
+	<collection property="product_colorList" resultMap = "colorMap">
+	</collection>
+</resultMap>
+
+<resultMap type = "com.phonemall.domain.ProductImageVO" id = "imageMap">
+	<result property = "image_uuid" column = "image_uuid"/>
+	<result property="image_uploadPath" column = "image_uploadPath"/>
+	<result property="image_name" column="image_name"/>
+	<result property = "image_type" column="image_type"/>
+	<result property = "product_id" column="product_id"/>
+</resultMap>
+
+<resultMap type = "com.phonemall.domain.ProductColorListVO" id="colorMap">
+	<result property = "product_id" column = "product_id"/>
+	<result property = "product_color" column = "product_color"/>
+</resultMap>
+
+<select id="read" resultMap = "productMap">
+	SELECT p.*, image_uuid, image_uploadPath, image_name, image_type, product_color
+	FROM product AS p
+	LEFT OUTER JOIN product_image AS i
+	ON i.product_id = #{product_id}
+	LEFT OUTER JOIN product_colorList AS c
+	on c.product_id = #{product_id}
+	WHERE p.product_id = #{product_id}
+</select>
+
+<delete id="delete">
+	DELETE FROM product WHERE product_id = #{product_id}
+</delete>
+
+<update id="update">
+	UPDATE product
+	SET product_title = #{product_title},
+	product_price = #{product_price},
+	product_description = #{product_description},
+	product_information = #{product_information},
+	product_brand = #{product_brand}, 
+	product_type = #{product_type}, 
+	product_carrier= #{product_carrier}
+	WHERE product_id = #{product_id}
+</update>
+
+<sql id="criteria">
+	<if test= "keyword != null and keyword != ''">
+		AND product_title LIKE CONCAT('%', #{keyword}, '%')
+	</if>
+	
+	<if test= "type != null and type != ''">
+		AND product_brand = #{brand} AND product_type = #{type}
+	</if>
+	
+	<if test= "carrier != null and carrier != ''">
+		AND product_carrier = #{carrier}
+	</if>
+	
+	<if test= "#{priceStart} !=null and #{priceEnd} != null">
+		AND product_price BETWEEN #{priceStart} AND #{priceEnd}
+	</if>
+	
+</sql>
+
+<select id = "getListWithPaging" resultMap = "productMap">
+	<![CDATA[
+	SELECT p.*, image_uuid, image_uploadPath, image_name
+	FROM product AS p
+	LEFT OUTER JOIN product_image AS i
+	ON p.product_id = i.product_id AND i.product_id>0 AND image_type = 'mainImage'
+	WHERE p.product_id > 0
+	]]>
+	
+	<include refid="criteria"></include>
+	
+	ORDER BY p.product_id DESC
+	LIMIT #{pageStart}, #{amount}
+	
+</select>
+
+<select id="getTotalCount" resultType="int">
+	SELECT count(*) FROM product WHERE product_id>0
+	<include refid="criteria"></include>
+	
+</select>
+
+<update id="updateReview">
+	UPDATE product 
+	SET review_count = review_count + #{amount},
+		product_rating = (
+			SELECT ROUND(AVG(review_rating),2)
+			FROM product_reviews
+			WHERE product_id = #{product_id}
+		)
+	WHERE product_id = #{product_id}
+</update>
+
+<resultMap type="com.phonemall.domain.ProductVO" id ="myProductMap">
+	<result property = "product_id" column="product_id"/>
+	<result property = "product_title" column = "product_title"/>
+	<result property = "product_brand" column = "product_brand"/>
+	<result property = "product_type" column = "product_type"/>
+	<result property = "product_carrier" column = "product_carrier"/>
+	<result property = "product_information" column="review_id"/>
+	<association  property="product_imageList" resultMap = "imageMap">
+	</association>
+</resultMap>
+
+<select id="myReviewProductList" resultMap = "myProductMap">
+SELECT p.product_id, product_title, product_brand, product_type, product_carrier, image_uuid, image_uploadPath, image_name, image_type, review_id
+FROM product AS p
+LEFT OUTER JOIN product_image AS i
+ON p.product_id = i.product_id and i.product_id>0 and i.image_type = 'mainImage'
+JOIN(
+	SELECT product_id,review_id
+	FROM product_reviews
+	WHERE review_reviewer = #{reviewer}
+    ORDER BY review_id DESC
+	LIMIT #{cri.pageStart}, #{cri.amount}
+)rr
+ON rr.product_id = p.product_id 
+
+</select>
+
+<select id="getRecentList" resultMap = "productMap">
+	SELECT p.*, image_uuid, image_uploadPath, image_name, image_type
+	FROM (SELECT product_id, product_title, product_price, product_brand 
+		FROM product 
+		WHERE product_id>0
+		ORDER BY product_id DESC
+        LIMIT #{amount}) p
+	LEFT OUTER JOIN product_image AS i
+	ON p.product_id = i.product_id AND i.product_id>0 AND image_type = 'mainImage'
+</select>
+
+<select id="getSaleList" resultMap = "productMap">
+	SELECT p.*, image_uuid, image_uploadPath, image_name, image_type
+	FROM (SELECT product_id, product_title, product_price
+		FROM product 
+		WHERE product_id>0
+        LIMIT 2) p
+	LEFT OUTER JOIN product_image AS i
+	ON p.product_id = i.product_id AND i.product_id>0 AND image_type = 'mainImage'
+</select>
+
+<select id="getPopularList" resultMap="productMap">
+	SELECT w.*, image_uuid, image_uploadPath, image_name, image_type, p.product_title, p.product_price, p.product_brand
+	FROM (SELECT product_id, count(*) AS wish_count
+		FROM wishlist 
+		GROUP by product_id
+		ORDER BY wish_count DESC, wishlist_id DESC
+		LIMIT 3) w
+	LEFT OUTER JOIN product_image AS i
+	ON w.product_id = i.product_id AND w.product_id>0 AND image_type = 'mainImage'
+	JOIN product AS p
+	ON w.product_id = p.product_id AND w.product_id>0
+
+</select>
+
+<select id="getBestList" resultMap="productMap">
+	SELECT p.*, image_uuid, image_uploadPath, image_name, image_type
+	FROM (SELECT product_id, product_title, product_price, product_rating, product_brand
+		FROM product 
+		ORDER BY product_rating DESC
+        LIMIT 3) p
+	LEFT OUTER JOIN product_image AS i
+	ON p.product_id = i.product_id AND i.product_id>0 AND image_type = 'mainImage'
+</select>
+
+<select id="getQuickView" resultMap="productMap">
+	SELECT p.product_id, product_title, product_price, product_information, product_color, image_uuid, image_uploadPath, image_name
+	FROM product AS p
+	LEFT OUTER JOIN product_image AS i
+	ON i.product_id = #{product_id} AND image_type = 'mainImage'
+	LEFT OUTER JOIN product_colorList AS c
+	on c.product_id = #{product_id}
+	WHERE p.product_id = #{product_id}
+</select>
+
+<select id="getRelatedList" resultMap="productMap">
+	SELECT p.*, image_uuid, image_uploadPath, image_name, image_type
+	FROM (SELECT product_id, product_title, product_price, product_rating, review_count
+		FROM product 
+		WHERE product_brand=#{product_brand} AND product_id != #{product_id}
+        LIMIT 3) p
+	LEFT OUTER JOIN product_image AS i
+	ON p.product_id = i.product_id AND i.product_id>0 AND image_type = 'mainImage'
+</select>
+</mapper>

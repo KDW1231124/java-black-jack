@@ -49,10 +49,3 @@
         * User는 자기 카드의 합이 21 이하 인 경우, 앞으로 단 1장의 카드만 뽑는 조건으로 Double Down 가능
 
 
-## Authors
-
-최동선 [moving-line](https://github.com/moving-line)   
-Contact : movinglinecheck@gmail.com
-
-노진산 [zingoworks](https://github.com/zingoworks)    
-Contact : zingoworks@gmail.com

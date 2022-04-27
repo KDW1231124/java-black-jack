@@ -25,14 +25,13 @@
 #### `Test`
 + JUnit 4.12
 
-## 3. ERD 설계
-<img src="https://user-images.githubusercontent.com/70243735/116400783-6683a980-a865-11eb-97a6-3a8e0060417c.jpg">
 
-## 4. 실행화면
+
+## 3. 실행화면
 
 <img src="https://user-images.githubusercontent.com/70243735/116489190-4c7eb100-a8cf-11eb-8efd-413448cc76bf.gif">
 
-## 5. 핵심 기능
+## 4. 핵심 기능
 
 + #### 로그인
   : Spring Security를 사용하여 로그인을 할 수 있습니다.
@@ -137,4 +136,4 @@
 
 <br>
 
-## 6. 회고 / 느낀점
+
